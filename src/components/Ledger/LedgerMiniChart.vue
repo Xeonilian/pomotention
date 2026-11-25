@@ -27,7 +27,7 @@ const props = withDefaults(
     pieSlices?: LedgerPieSlice[];
     trendBuckets?: LedgerTrendBucket[];
     trendDayClickable?: boolean;
-    /** APP 选中日 0 点；日/周趋势轴高亮用 */
+    /** APP 选中日 0 点；趋势轴高亮所在日/周/月桶 */
     highlightDayStart?: number | null;
     emptyLabel?: string;
     height?: number;
@@ -139,12 +139,23 @@ function formatTrendHoverValue(value: unknown): string {
   return n.toFixed(1);
 }
 
+/** 高亮含 APP 日的桶：日精确；周/月轴则落在对应周或月区间 */
+function findHighlightBucketIndex(buckets: LedgerTrendBucket[], highlightDayStart: number | null): number {
+  if (highlightDayStart == null || buckets.length === 0) return -1;
+  for (let i = buckets.length - 1; i >= 0; i--) {
+    const start = buckets[i]!.start;
+    const nextStart = i + 1 < buckets.length ? buckets[i + 1]!.start : Number.POSITIVE_INFINITY;
+    if (highlightDayStart >= start && highlightDayStart < nextStart) return i;
+  }
+  return -1;
+}
+
 function buildTrendOption(): EChartsOption {
   const buckets = props.trendBuckets;
   const hasData = buckets.some((b) => b.expense > 0 || b.income > 0);
   const defaultAxisColor = resolveChartColor("--color-text-secondary", DEFAULT_AXIS_FALLBACK);
   const highlightAxisColor = resolveChartColor("--color-blue", HIGHLIGHT_AXIS_FALLBACK);
-  const highlightDayStart = props.highlightDayStart ?? null;
+  const highlightIndex = findHighlightBucketIndex(buckets, props.highlightDayStart ?? null);
   return {
     tooltip: {
       trigger: "axis",
@@ -162,11 +173,14 @@ function buildTrendOption(): EChartsOption {
         fontSize: 10,
         interval: 0,
         rotate: buckets.length > 8 ? 35 : 0,
-        color: (value?: string | number, index?: number) => {
-          if (highlightDayStart == null) return defaultAxisColor;
-          const bucket =
-            typeof index === "number" ? buckets[index] : buckets.find((b) => b.label === String(value ?? ""));
-          return bucket && bucket.start === highlightDayStart ? highlightAxisColor : defaultAxisColor;
+        color: defaultAxisColor,
+        formatter: (value: string, index: number) => (index === highlightIndex ? `{hl|${value}}` : String(value)),
+        rich: {
+          hl: {
+            color: highlightAxisColor,
+            fontWeight: "bold",
+            fontSize: 10,
+          },
         },
       },
     },

@@ -11,12 +11,55 @@
     v-model:show="showModal"
     preset="card"
     class="ledger-aggregate-modal"
-    :title="modalTitle"
     :style="modalStyle"
     :content-style="modalContentStyle"
     :mask-closable="true"
     @after-enter="onModalShown"
   >
+    <!-- 标题：与 HomeHeader 同源日期段 + 点击跳转 -->
+    <template #header>
+      <div class="ledger-aggregate__title" @click.stop>
+        <span class="ledger-aggregate__title-label">收支统计</span>
+        <span class="ledger-aggregate__title-sep">·</span>
+        <template v-if="viewScale !== 'year'">
+          <span class="ledger-aggregate__date-part" title="进入年视图" @click="onYearJump">{{ titleYearText }}</span>
+        </template>
+        <template v-else>
+          <span class="ledger-aggregate__date-part" title="进入日视图" @click="onDayJump">{{ titleYearText }}</span>
+        </template>
+        <span v-if="viewScale === 'day'" class="ledger-aggregate__date-part" title="进入周视图" @click="onWeekJump">
+          {{ titleDateText }}
+        </span>
+        <span v-else-if="viewScale === 'week'" class="ledger-aggregate__date-part" title="进入月视图" @click="onMonthJump">
+          &nbsp;{{ titleWeekText }}
+        </span>
+        <span v-else-if="viewScale === 'month'" class="ledger-aggregate__date-part" title="进入周视图" @click="onWeekJump">
+          &nbsp;{{ titleMonthText }}
+        </span>
+      </div>
+    </template>
+
+    <!-- 标题行右侧：尺度切换 + 前后翻日（与外层 planner 同源） -->
+    <template #header-extra>
+      <div class="ledger-aggregate__title-nav" @click.stop>
+        <n-button size="small" text title="切换视图" @click="onViewSet">
+          <template #icon>
+            <n-icon :size="20"><CalendarSettings20Regular /></n-icon>
+          </template>
+        </n-button>
+        <n-button size="small" text :title="prevTitle" @click="onDateNav('prev')">
+          <template #icon>
+            <n-icon :size="20"><ChevronLeft20Regular /></n-icon>
+          </template>
+        </n-button>
+        <n-button size="small" text :title="nextTitle" @click="onDateNav('next')">
+          <template #icon>
+            <n-icon :size="20"><ChevronRight20Regular /></n-icon>
+          </template>
+        </n-button>
+      </div>
+    </template>
+
     <div v-if="showModal" class="ledger-aggregate" :class="{ 'ledger-aggregate--desktop': !isMobile }">
       <section class="ledger-aggregate__stats">
         <div class="ledger-stat ledger-stat--income">
@@ -122,11 +165,17 @@
                 <td colspan="5" class="ledger-aggregate-table__guide">
                   <div class="ledger-guide">
                     <section class="ledger-guide__section">
+                      <div class="ledger-guide__title">日期与视图</div>
+                      <p class="ledger-guide__body">
+                        标题日期与 Planner 相同：点年份 / 日 / Week / 月可切换视图；日历钮非日视图先回日，再日→周→月→年；‹ ›
+                        按当前尺度翻页。
+                      </p>
+                      <p class="ledger-guide__body">日 / 周还可点「收支趋势」上的日期跳到该天。</p>
+                    </section>
+                    <section class="ledger-guide__section">
                       <div class="ledger-guide__title">本表追加</div>
                       <p class="ledger-guide__body">最下行点 +，填金额后失焦或回车入账；点分类选标签，备注可选。</p>
-                      <p class="ledger-guide__body">
-                        追加行的日期跟 APP 当前选中日期一致；日 / 周视图可点「收支趋势」里的日期切换，或在 APP 里切换日期。
-                      </p>
+                      <p class="ledger-guide__body">追加行的日期跟 APP 当前选中日期一致。</p>
                     </section>
                     <section class="ledger-guide__section">
                       <div class="ledger-guide__title">Todo 标题</div>
@@ -242,6 +291,9 @@ import {
   Add20Filled,
   ArrowSortDown24Filled,
   ArrowSortDownLines24Regular,
+  CalendarSettings20Regular,
+  ChevronLeft20Regular,
+  ChevronRight20Regular,
   Delete24Regular,
   QuestionCircle20Regular,
   TextSortAscending16Regular,
@@ -284,20 +336,96 @@ const newRowCategoryIds = ref<number[]>([]);
 const newAmountInputRef = ref<HTMLInputElement | null>(null);
 const newRowDraft = ref({ memo: "", amount: "" });
 
-const { aggregateData, scaleLabel, formatLedgerMoney, viewScale } = useLedgerAggregatePanel(computed(() => tableSort.value));
+const { aggregateData, formatLedgerMoney, viewScale } = useLedgerAggregatePanel(computed(() => tableSort.value));
 
 const trendDayClickable = computed(() => viewScale.value === "day" || viewScale.value === "week");
 
-/** 日/周趋势轴高亮 APP 选中日；月及以上不传 */
+/** 趋势轴高亮：日/周标当天；月标所在周、年标所在月（由 chart 按桶区间匹配） */
 const appSelectedDayStart = computed(() => getDayStartTimestamp(appDateTimestamp()));
 
-const trendHighlightDayStart = computed(() =>
-  viewScale.value === "day" || viewScale.value === "week" ? appSelectedDayStart.value : null,
-);
+const trendHighlightDayStart = computed(() => appSelectedDayStart.value);
 
 const chartHeight = computed(() => (isMobile.value ? 160 : 220));
 
-const modalTitle = computed(() => `收支统计 · ${scaleLabel.value}视图`);
+type ViewType = "day" | "week" | "month" | "year";
+
+function unwrapDisplay(raw: unknown): string {
+  if (typeof raw === "string") return raw;
+  if (raw && typeof raw === "object" && "value" in raw) return String((raw as { value: unknown }).value ?? "");
+  return "";
+}
+
+/** 与 HomeHeader 同源文案 */
+const titleYearText = computed(() => {
+  const y = unwrapDisplay(dataStore.dateService?.displayYearInfo);
+  if (viewScale.value === "day") return isMobile.value ? `${y.slice(2)}-` : `${y}-`;
+  return y;
+});
+/** 只要 MM-DD，不要 Sun / Mon 星期 */
+const titleDateText = computed(() => {
+  const ts = appDateTimestamp();
+  const d = new Date(ts);
+  const mm = String(d.getMonth() + 1).padStart(2, "0");
+  const dd = String(d.getDate()).padStart(2, "0");
+  return `${mm}-${dd}`;
+});
+const titleWeekText = computed(() => unwrapDisplay(dataStore.dateService?.displayWeekInfo));
+const titleMonthText = computed(() => unwrapDisplay(dataStore.dateService?.displayMonthInfo));
+
+const prevTitle = computed(() => {
+  const view = settingStore.settings.viewSet;
+  if (view === "day") return "上一天";
+  if (view === "week") return "上一周";
+  if (view === "year") return "上一年";
+  return "上一月";
+});
+
+const nextTitle = computed(() => {
+  const view = settingStore.settings.viewSet;
+  if (view === "day") return "下一天";
+  if (view === "week") return "下一周";
+  if (view === "year") return "下一年";
+  return "下一月";
+});
+
+/** 与 HomeView.onDateSet prev/next 同路径 */
+function onDateNav(direction: "prev" | "next") {
+  const day = dataStore.dateService?.navigateByView(direction);
+  if (typeof day === "number") dataStore.setSelectedDate(day);
+}
+
+/** 与 HomeView 头部点击跳转同路径（含 topHeight） */
+function onYearJump() {
+  settingStore.settings.viewSet = "year";
+  settingStore.settings.topHeight = isMobile.value ? 440 : 450;
+}
+function onDayJump() {
+  settingStore.settings.viewSet = "day";
+  settingStore.settings.topHeight = isMobile.value ? 305 : 300;
+}
+function onMonthJump() {
+  settingStore.settings.viewSet = "month";
+  settingStore.settings.topHeight = isMobile.value ? 435 : 610;
+}
+function onWeekJump() {
+  settingStore.settings.viewSet = "week";
+  settingStore.settings.topHeight = isMobile.value ? 435 : 610;
+}
+
+/** 非 day 先回 day；已在 day 再按 day→week→month→year 循环 */
+function onViewSet() {
+  const order: readonly ViewType[] = ["day", "week", "month", "year"] as const;
+  const cur = settingStore.settings.viewSet as ViewType;
+  const next: ViewType = cur === "day" ? order[(order.indexOf(cur) + 1) % order.length]! : "day";
+  settingStore.settings.viewSet = next;
+  if (next === "day") {
+    settingStore.settings.topHeight = isMobile.value ? 305 : 300;
+  } else if (next === "week" || next === "month") {
+    settingStore.settings.topHeight = isMobile.value ? 435 : 610;
+  } else {
+    settingStore.settings.topHeight = isMobile.value ? 440 : 450;
+  }
+}
 
 const modalStyle = computed(() =>
   isMobile.value
@@ -648,6 +776,10 @@ watch(
 
 .ledger-aggregate-table__date--app-day {
   color: var(--color-blue);
+  font-weight: 600;
+  font-size: 12px;
+  left: 0 !important
+  ;
 }
 
 .ledger-aggregate-table__tags :deep(.tag-picker__trigger) {
@@ -869,6 +1001,34 @@ watch(
 .ledger-aggregate--desktop .ledger-aggregate-table__tags {
   white-space: normal;
   word-break: break-word;
+}
+
+.ledger-aggregate__title {
+  display: inline-flex;
+  align-items: baseline;
+  flex-wrap: wrap;
+  min-width: 0;
+  line-height: 1.3;
+}
+
+.ledger-aggregate__title-label,
+.ledger-aggregate__title-sep {
+  margin-right: 4px;
+}
+
+.ledger-aggregate__date-part {
+  cursor: pointer;
+}
+
+.ledger-aggregate__date-part:hover {
+  color: var(--color-blue);
+}
+
+.ledger-aggregate__title-nav {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  margin-right: 2px;
 }
 </style>
 
