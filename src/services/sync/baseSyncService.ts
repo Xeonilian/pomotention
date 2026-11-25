@@ -403,6 +403,34 @@ export abstract class BaseSyncService<TLocal extends SyncableEntity, TCloud> {
     }
   }
 
+  /** 云端该表最新 last_modified（ms）；无行则为 0。不改表结构，只读现有列 */
+  async getCloudMaxModified(): Promise<{ success: boolean; maxModified: number; error?: string }> {
+    try {
+      if (!supabase) {
+        return { success: false, maxModified: 0, error: "云同步未启用" };
+      }
+      const user = await getCurrentUser();
+      if (!user) {
+        return { success: false, maxModified: 0, error: "用户未登录" };
+      }
+      const { data, error } = await supabase
+        .from(this.tableName)
+        .select("last_modified")
+        .eq("user_id", user.id)
+        .order("last_modified", { ascending: false })
+        .limit(1)
+        .maybeSingle();
+      if (error) {
+        return { success: false, maxModified: 0, error: error.message };
+      }
+      const raw = data?.last_modified;
+      const maxModified = raw ? new Date(raw).getTime() : 0;
+      return { success: true, maxModified: Number.isFinite(maxModified) ? maxModified : 0 };
+    } catch (error: any) {
+      return { success: false, maxModified: 0, error: error.message };
+    }
+  }
+
   /**
    * 清理超过 30 天的已删除记录（云端）
    */

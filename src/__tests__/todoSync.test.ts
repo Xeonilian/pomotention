@@ -251,6 +251,43 @@ describe("TodoSyncService", () => {
       expect(todoListRef.value[0].synced).toBe(false);
     });
 
+    it("download: 未同步行只补空勾选/时间，不改标题", async () => {
+      const existingTodo = createMockTodo({
+        id: 1111111111111,
+        status: "",
+        startTime: undefined,
+        doneTime: undefined,
+        activityTitle: "本地标题",
+        priority: 3,
+        synced: false,
+      });
+      todoListRef.value = [existingTodo];
+      indexMap.set(existingTodo.id, existingTodo);
+
+      vi.mocked(supabaseClient.rpc).mockResolvedValueOnce(
+        mockPostgrestOk([
+          createMockFullTodoFromCloud({
+            id: 1111111111111,
+            status: "done",
+            startTime: 1_700_000_000_000,
+            doneTime: 1_700_000_100_000,
+            activityTitle: "云端标题",
+            priority: 1,
+            last_modified: new Date(Date.now() + 60_000).toISOString(),
+          }),
+        ]),
+      );
+
+      await service.download(0);
+
+      expect(todoListRef.value[0].status).toBe("done");
+      expect(todoListRef.value[0].startTime).toBe(1_700_000_000_000);
+      expect(todoListRef.value[0].doneTime).toBe(1_700_000_100_000);
+      expect(todoListRef.value[0].activityTitle).toBe("本地标题");
+      expect(todoListRef.value[0].priority).toBe(3);
+      expect(todoListRef.value[0].synced).toBe(false);
+    });
+
     it("download: 保留本地未同步的修改", async () => {
       const now = Date.now();
       const localTodo = createUnsyncedTodo({
