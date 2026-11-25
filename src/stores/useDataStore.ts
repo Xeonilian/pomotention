@@ -31,6 +31,8 @@ import { unifiedDateService } from "@/services/data/unifiedDateService";
 import { collectPomodoroData, collectTaskRecordData, aggregateByTime } from "@/services/chart/chartDataService";
 import { getLifeRecordDef, isLifeRecordActivity, lifeRecordPlaceholderTitle, pickFirstNonLifeRecordTagId, LIFE_RECORD_DEFS, type LifeRecordKind } from "@/core/lifeRecord";
 import { isDayEnergyTask } from "@/core/dayEnergy";
+import { isLedgerDayStubActivity } from "@/core/ledger/ledgerDayStub";
+import { replaceTaskHeadingFromActivity } from "@/services/task/taskHeadingTitle";
 import {
   buildLifeRecordEntities,
   findLifeRecordTaskForDay,
@@ -1321,6 +1323,7 @@ export const useDataStore = defineStore(
       (newVal) => {
         // title / location / due*：以 activity 为准下推副本；status 不抄（勾选真相在 todo/schedule）
         // estPomo：todo 数组为源，这里只把 estPomoI（首槽）投影进去，不能反客为主
+        let taskHeadingDirty = false;
         newVal.forEach((activity) => {
           const relatedSchedule = scheduleByActivityId.value.get(activity.id);
           if (relatedSchedule) {
@@ -1348,11 +1351,26 @@ export const useDataStore = defineStore(
           }
           const relatedTask = taskByActivityId.value.get(activity.id);
           if (relatedTask && relatedTask.activityTitle !== activity.title) {
-            relatedTask.activityTitle = activity.title;
+            const nextTitle = activity.title;
+            // 副本还停在旧标题，说明这次是 activity.title 变了：# 行跟着改。描述里改过的标题不会走这里。
+            if (!isDayEnergyTask(relatedTask) && !isLifeRecordActivity(activity) && !isLedgerDayStubActivity(activity)) {
+              const prev = relatedTask.description ?? "";
+              const nextDesc = replaceTaskHeadingFromActivity(prev, nextTitle);
+              if (nextDesc !== prev) {
+                relatedTask.description = nextDesc;
+                taskHeadingDirty = true;
+              }
+            }
+            relatedTask.activityTitle = nextTitle;
             relatedTask.synced = false;
             relatedTask.lastModified = Date.now();
           }
         });
+        if (taskHeadingDirty) {
+          saveActivities(activityList.value);
+          saveTasks(taskList.value);
+          scheduleDebouncedCloudUpload();
+        }
       },
       { deep: true },
     );

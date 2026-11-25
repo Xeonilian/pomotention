@@ -118,6 +118,7 @@
         :initialContent="taskDescription"
         :isMarkdown="isMarkdown"
         @update:content="updateTaskDescriptionInStore"
+        @update:activity-title="updateActivityTitleFromHeading"
         @update:is-editing="onTaskRecordIsEditing"
       />
     </div>
@@ -190,8 +191,15 @@ const taskTrackerStore = useTaskTrackerStore();
 const dataStore = useDataStore();
 const { isMobile } = useDevice();
 const { selectedTaskId, selectedTask, selectedTagIds, isStarred } = storeToRefs(taskTrackerStore);
-const { updateTaskDescription, handleEnergyRecord, handleRewardRecord, handleInterruptionRecord, handleRemoveTaskRecord, handleStar } =
-  taskTrackerStore;
+const {
+  updateTaskDescription,
+  updateActivityTitleFromHeading,
+  handleEnergyRecord,
+  handleRewardRecord,
+  handleInterruptionRecord,
+  handleRemoveTaskRecord,
+  handleStar,
+} = taskTrackerStore;
 
 // 生活记录不再在 TaskTracker 内切换：所有进入走 HomeView 的整合 sheet（openDaySheet）
 

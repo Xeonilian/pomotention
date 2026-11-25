@@ -51,6 +51,7 @@ import {
   toggleBodyCheckboxInDescription,
 } from "@/services/task/taskRecordService";
 import { replaceNoteInner, splitTaskNotes } from "@/services/task/taskNoteBlocks";
+import { fillEmptyTaskHeading, readTaskHeadingTitle } from "@/services/task/taskHeadingTitle";
 import { useCaretFlash } from "@/composables/task/useCaretFlash";
 import { useDevice } from "@/composables/platform/useDevice";
 import { useTaskRecordShortcuts } from "@/composables/task/useTaskRecordShortcuts";
@@ -82,7 +83,7 @@ const markdownReaderStyle = computed(() =>
 
 const props = defineProps<{
   taskId: number | null;
-  /** 与活动标题同步，用于描述仅为 # 时自动补第一行 */
+  /** activity.title。每次进入编辑都和描述第一行 `#` 比对 */
   activityTitle?: string;
   initialContent: string;
   isMarkdown: boolean;
@@ -92,6 +93,8 @@ const emit = defineEmits<{
   (e: "update:content", content: string): void;
   (e: "activetaskId", taskId: number | null): void;
   (e: "update:isEditing", value: boolean): void;
+  /** 描述里的一级标题改了，回写 activity.title */
+  (e: "update:activityTitle", title: string): void;
 }>();
 
 const content = ref(props.initialContent);
@@ -101,6 +104,8 @@ const isEditing = ref(false);
 const textarea = ref<HTMLTextAreaElement | null>(null);
 // 进入编辑瞬间的文案快照：无改动则 blur / 同步钩子不写 store、不标 unsynced
 const editSessionBaseline = ref("");
+// 本次进入编辑时的 `#` 标题；只有用户改过才回写 activity.title
+const headingAtEditStart = ref<string | null>(null);
 
 const splitNotes = computed(() => splitTaskNotes(content.value || ""));
 const noteBlocks = computed(() => splitNotes.value.notes);
@@ -119,14 +124,46 @@ function contentIsDirty(): boolean {
 
 /** 相对编辑基线有变化时才回写父级与 store，并刷新基线（避免同步前钩子重复 emit） */
 function flushDescriptionIfDirty() {
-  if (!contentIsDirty()) return;
-  emit("update:content", content.value);
-  editSessionBaseline.value = content.value;
+  const heading = readTaskHeadingTitle(content.value ?? "");
+  const headingChanged = Boolean(heading) && heading !== headingAtEditStart.value;
+  if (contentIsDirty()) {
+    emit("update:content", content.value);
+    editSessionBaseline.value = content.value;
+  }
+  // 先落描述，再改 activity.title，避免标题 watch 用旧正文重写 `#` 行
+  if (headingChanged && heading) {
+    emit("update:activityTitle", heading);
+    headingAtEditStart.value = heading;
+  }
+}
+
+/** 每次进入编辑：空 `#` 行抄 activity.title；已有标题且不同则回写 activity */
+function reconcileHeadingOnActivate() {
+  const activity = (props.activityTitle ?? "").trim();
+  const heading = readTaskHeadingTitle(content.value ?? "");
+  if (heading == null) {
+    headingAtEditStart.value = null;
+    return;
+  }
+  if (heading === "") {
+    if (activity) {
+      const next = fillEmptyTaskHeading(content.value ?? "", activity);
+      if (next !== content.value) content.value = next;
+    }
+    headingAtEditStart.value = readTaskHeadingTitle(content.value ?? "");
+    return;
+  }
+  if (heading !== activity) {
+    emit("update:activityTitle", heading);
+  }
+  headingAtEditStart.value = heading;
 }
 
 watch(
-  () => props.initialContent,
-  (newContent) => {
+  () => [props.taskId, props.initialContent] as const,
+  ([taskId, newContent], prev) => {
+    // 同一次编辑里，activity 标题下推 `#` 行不应把未保存正文盖掉
+    if (isEditing.value && prev && taskId === prev[0]) return;
     content.value = newContent;
   },
 );
@@ -141,6 +178,7 @@ watch(
 
 const startEditing = () => {
   editSessionBaseline.value = content.value;
+  reconcileHeadingOnActivate();
   isEditing.value = true;
   // 手机上的空间有限，进入编辑时压缩顶部高度，把空间让给编辑区
   if (isMobile.value) {
@@ -154,10 +192,6 @@ const startEditing = () => {
     setTimeout(() => {
       const ta = textarea.value;
       if (ta && ta instanceof HTMLTextAreaElement && document.body.contains(ta)) {
-        const t = (props.activityTitle ?? "").trim();
-        if (t && content.value.trim() === "#") {
-          content.value = `# ${t}\n`;
-        }
         // 确保键盘弹出：重新设置选区到末尾并执行 focus
         const len = ta.value.length;
         try {

@@ -5,6 +5,9 @@ import { computed, toValue } from "vue";
 import { useDataStore } from "./useDataStore";
 import { taskService } from "@/services/task/taskService";
 import { convertToSchedule } from "@/services/activity/activityService";
+import { isDayEnergyTask } from "@/core/dayEnergy";
+import { isLifeRecordActivity } from "@/core/lifeRecord";
+import { isLedgerDayStubActivity } from "@/core/ledger/ledgerDayStub";
 
 export const useTaskTrackerStore = defineStore("taskTracker", () => {
   const dataStore = useDataStore();
@@ -33,6 +36,22 @@ export const useTaskTrackerStore = defineStore("taskTracker", () => {
     if (selectedTaskId.value) {
       taskService.updateTask(selectedTaskId.value, { description: description, synced: false, lastModified: Date.now() });
     }
+  }
+
+  /** 描述第一行 `#` 标题改了：写回 activity.title，并标未同步（云端标题只认 activity） */
+  function updateActivityTitleFromHeading(title: string) {
+    const task = selectedTask.value;
+    if (!task?.sourceId || isDayEnergyTask(task)) return;
+    const activity = dataStore.activityById.get(task.sourceId);
+    if (!activity || activity.deleted) return;
+    if (isLifeRecordActivity(activity) || isLedgerDayStubActivity(activity)) return;
+    const next = title.trim();
+    if (!next || next === activity.title) return;
+    dataStore.updateActivityById(activity.id, {
+      title: next,
+      synced: false,
+      lastModified: Date.now(),
+    });
   }
 
   function handleEnergyRecord(val: { value: number; description?: string; recordedAt: number }) {
@@ -111,6 +130,7 @@ export const useTaskTrackerStore = defineStore("taskTracker", () => {
     isStarred,
     // 暴露给组件的操作
     updateTaskDescription,
+    updateActivityTitleFromHeading,
     handleEnergyRecord,
     handleRewardRecord,
     handleInterruptionRecord,
