@@ -19,8 +19,8 @@
     <!-- 标题：与 HomeHeader 同源日期段 + 点击跳转 -->
     <template #header>
       <div class="ledger-aggregate__title" @click.stop>
-        <span class="ledger-aggregate__title-label">收支统计</span>
-        <span class="ledger-aggregate__title-sep">·</span>
+        <span class="ledger-aggregate__title-label"></span>
+
         <template v-if="viewScale !== 'year'">
           <span class="ledger-aggregate__date-part" title="进入年视图" @click="onYearJump">{{ titleYearText }}</span>
         </template>
@@ -1011,8 +1011,7 @@ watch(
   line-height: 1.3;
 }
 
-.ledger-aggregate__title-label,
-.ledger-aggregate__title-sep {
+.ledger-aggregate__title-label {
   margin-right: 4px;
 }
 

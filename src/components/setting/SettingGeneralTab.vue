@@ -9,7 +9,7 @@
     </n-card>
     <n-card size="small" class="setting-tab-card">
       <n-descriptions class="setting-general-desc" label-placement="left" :column="1" bordered size="small">
-        <n-descriptions-item label="当前版本">{{ generalVersionDisplay }}</n-descriptions-item>
+        <n-descriptions-item label="软件版本">{{ generalVersionDisplay }}</n-descriptions-item>
         <n-descriptions-item label="SW 版本">{{ swVersionDisplay }}</n-descriptions-item>
         <n-descriptions-item v-if="isTauri()" label="线上最新">
           <template v-if="remoteReleaseOk">
@@ -337,8 +337,7 @@ async function refreshSwVersion() {
   }
   try {
     const reg = await navigator.serviceWorker.getRegistration();
-    const scriptUrl =
-      reg?.active?.scriptURL || reg?.waiting?.scriptURL || reg?.installing?.scriptURL || `${window.location.origin}/sw.js`;
+    const scriptUrl = reg?.active?.scriptURL || reg?.waiting?.scriptURL || reg?.installing?.scriptURL || `${window.location.origin}/sw.js`;
     const res = await fetch(scriptUrl, { cache: "no-cache" });
     if (!res.ok) {
       swVersionDisplay.value = "读取失败";
