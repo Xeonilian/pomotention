@@ -8,7 +8,7 @@
       <p class="support-note">说明见帮助「支持与订阅」。</p>
     </n-card>
     <n-card size="small" class="setting-tab-card">
-      <n-descriptions label-placement="left" :column="1" bordered size="small">
+      <n-descriptions class="setting-general-desc" label-placement="left" :column="1" bordered size="small">
         <n-descriptions-item label="当前版本">{{ generalVersionDisplay }}</n-descriptions-item>
         <n-descriptions-item label="SW 版本">{{ swVersionDisplay }}</n-descriptions-item>
         <n-descriptions-item v-if="isTauri()" label="线上最新">
@@ -444,6 +444,22 @@ onMounted(() => {
 
 .setting-tab-card + .setting-tab-card {
   margin-top: 12px;
+}
+
+/* 手机：标签列随内容收缩（约 4 字），不固定死宽度挤坏右列 */
+@media (max-width: 768px) {
+  .setting-general-desc :deep(.n-descriptions-table-header) {
+    width: 1%;
+    white-space: nowrap;
+    padding-left: 10px;
+    padding-right: 10px;
+  }
+
+  .setting-general-desc :deep(.n-descriptions-table-content) {
+    word-break: normal;
+    overflow-wrap: break-word;
+    min-width: 0;
+  }
 }
 </style>
 

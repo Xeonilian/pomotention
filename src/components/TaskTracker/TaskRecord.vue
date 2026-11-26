@@ -1,10 +1,7 @@
 <!-- TaskRecord.vue -->
 <template>
   <div class="task-record">
-    <div
-      v-if="!isEditing"
-      class="task-record-preview"
-    >
+    <div v-if="!isEditing" class="task-record-preview">
       <div
         class="markdown-content md-reader"
         :class="`md-theme-${settingStore.settings.markdownReaderTheme || 'classic'}`"
@@ -45,11 +42,7 @@
 <script setup lang="ts">
 import { ref, computed, watch, nextTick, onMounted, onUnmounted } from "vue";
 import { storeToRefs } from "pinia";
-import {
-  getClickContextFragments,
-  findFragmentSequenceInSource,
-  toggleBodyCheckboxInDescription,
-} from "@/services/task/taskRecordService";
+import { getClickContextFragments, findFragmentSequenceInSource, toggleBodyCheckboxInDescription } from "@/services/task/taskRecordService";
 import { replaceNoteInner, splitTaskNotes } from "@/services/task/taskNoteBlocks";
 import { fillEmptyTaskHeading, readTaskHeadingTitle } from "@/services/task/taskHeadingTitle";
 import { useCaretFlash } from "@/composables/task/useCaretFlash";
@@ -326,9 +319,10 @@ defineExpose({
 }
 
 .task-textarea {
-  width: calc(100% - 4px);
-  height: calc(100% - env(safe-area-inset-bottom));
-  margin: 2px;
+  width: calc(100% - 10px);
+  /* 扣除上下 margin(2+4) 与底部预留，避免撑出父级滚动条、在 area 右侧留缝 */
+  height: calc(100% - env(safe-area-inset-bottom) - 14px);
+  margin: 2px 2px 0px 6px;
   padding: 6px 12px;
   border-radius: 12px;
   font-family: inherit;
