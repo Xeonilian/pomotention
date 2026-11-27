@@ -3,16 +3,23 @@
 // v13: 首次优先——activate 只删旧缓存；全量预缓存去掉；壳仍在 install 缓存（供 PWA）
 // v14: /sounds/ Range 从整文件缓存切片，避免媒体双轨分段重复上网
 // v15: /assets/ 禁 HTML 入缓存；命中缓存时拒 text/html，保留 SWR（弱网仍用旧包）
+// 本文件可增 REFRESH_APP，但勿轻易改 CACHE_VERSION：换代会删旧包，弱网易空窗
 const CACHE_VERSION = "v15";
 const CACHE_NAME = `pomotention-cache-${CACHE_VERSION}`;
 
 const SOUND_CACHE_VERSION = "v1";
 const SOUND_CACHE_NAME = `pomotention-sounds-${SOUND_CACHE_VERSION}`;
+/** 手动拉新暂存；activate 勿删，避免与进行中的 REFRESH_APP 打架 */
+const REFRESH_STAGING = "pomotention-refresh-staging";
 
 const APP_SHELL = ["/", "/index.html", "/manifest.webmanifest", "/icon-128.png", "/icon-192.png", "/icon-512.png", "/favicon.ico"];
+const APP_SHELL_REQUIRED = ["/", "/index.html"];
+const APP_SHELL_OPTIONAL = APP_SHELL.filter((u) => !APP_SHELL_REQUIRED.includes(u));
 
 const FILE_TIMEOUT_MS = 15000;
 const NAVIGATE_NETWORK_MS = 8000;
+/** 手动拉新：弱网单文件耐心等 */
+const REFRESH_FILE_TIMEOUT_MS = 90000;
 
 function addWithTimeout(cache, url, timeoutMs) {
   return new Promise((resolve, reject) => {
@@ -51,6 +58,11 @@ self.addEventListener("install", (event) => {
 self.addEventListener("message", (event) => {
   if (event.data && event.data.type === "SKIP_WAITING") {
     self.skipWaiting();
+    return;
+  }
+  if (event.data && event.data.type === "REFRESH_APP") {
+    const port = event.ports && event.ports[0];
+    event.waitUntil(handleRefreshApp(port));
   }
 });
 
@@ -60,7 +72,7 @@ self.addEventListener("activate", (event) => {
       const cacheNames = await caches.keys();
       await Promise.all(
         cacheNames.map((cacheName) => {
-          if (cacheName !== CACHE_NAME && cacheName !== SOUND_CACHE_NAME) {
+          if (cacheName !== CACHE_NAME && cacheName !== SOUND_CACHE_NAME && cacheName !== REFRESH_STAGING) {
             console.log("[Service Worker] Deleting old cache:", cacheName);
             return caches.delete(cacheName);
           }
@@ -70,6 +82,130 @@ self.addEventListener("activate", (event) => {
     })(),
   );
 });
+
+function replyRefresh(port, data) {
+  try {
+    port?.postMessage(data);
+  } catch (err) {
+    console.warn("[SW] REFRESH_APP reply failed:", err);
+  }
+}
+
+function fetchNetworkNoStore(url, timeoutMs) {
+  return new Promise((resolve, reject) => {
+    const controller = new AbortController();
+    const timer = setTimeout(() => {
+      controller.abort();
+      reject(new Error(`[SW] refresh timeout: ${url}`));
+    }, timeoutMs);
+    fetch(url, { signal: controller.signal, cache: "no-store", credentials: "same-origin" })
+      .then((response) => {
+        clearTimeout(timer);
+        resolve(response);
+      })
+      .catch((err) => {
+        clearTimeout(timer);
+        reject(err);
+      });
+  });
+}
+
+/** 从 index.html 抽出同域 /assets/ 入口 */
+function extractAssetPaths(html, origin) {
+  const paths = new Set();
+  const re = /(?:src|href)=["']([^"']+)["']/gi;
+  let match;
+  while ((match = re.exec(html))) {
+    try {
+      const abs = new URL(match[1], origin);
+      if (abs.origin === origin && abs.pathname.startsWith("/assets/")) {
+        paths.add(abs.pathname);
+      }
+    } catch {
+      /* 忽略非法 URL */
+    }
+  }
+  return Array.from(paths);
+}
+
+/** 拉新校验：允许 basic/cors；用 ok 而非死盯 status===200 */
+function isRefreshCacheable(request, response) {
+  if (!response || !response.ok) return false;
+  if (response.type !== "basic" && response.type !== "cors" && response.type !== "default") {
+    return false;
+  }
+  const path = new URL(request.url, self.location.origin).pathname;
+  if (!path.startsWith("/assets/")) return true;
+  if (responseLooksLikeHtml(response)) return false;
+  return true;
+}
+
+/** 先下完进暂存，成功才写入现网 CACHE_NAME；失败只丢暂存 */
+async function handleRefreshApp(port) {
+  // 立刻 ACK，便于客户端区分「旧 SW 不识此消息」与「弱网慢下」
+  replyRefresh(port, { phase: "started" });
+  try {
+    await caches.delete(REFRESH_STAGING);
+    const staging = await caches.open(REFRESH_STAGING);
+    const origin = self.location.origin;
+
+    const indexPath = "/index.html";
+    const indexRes = await fetchNetworkNoStore(new URL(indexPath, origin).href, REFRESH_FILE_TIMEOUT_MS);
+    const indexReq = new Request(indexPath);
+    if (!isRefreshCacheable(indexReq, indexRes)) {
+      throw new Error(`index not cacheable (${indexRes.status})`);
+    }
+    await staging.put(indexReq, indexRes.clone());
+    const indexText = await indexRes.text();
+
+    for (const path of APP_SHELL_REQUIRED) {
+      if (path === "/index.html") continue;
+      const res = await fetchNetworkNoStore(new URL(path, origin).href, REFRESH_FILE_TIMEOUT_MS);
+      const req = new Request(path);
+      if (!isRefreshCacheable(req, res)) {
+        throw new Error(`shell ${path} not cacheable (${res.status})`);
+      }
+      await staging.put(req, res);
+    }
+
+    for (const path of APP_SHELL_OPTIONAL) {
+      try {
+        const res = await fetchNetworkNoStore(new URL(path, origin).href, REFRESH_FILE_TIMEOUT_MS);
+        const req = new Request(path);
+        if (isRefreshCacheable(req, res)) await staging.put(req, res);
+      } catch (err) {
+        console.warn("[SW] REFRESH_APP optional shell skipped:", path, err);
+      }
+    }
+
+    const assetPaths = extractAssetPaths(indexText, origin);
+    if (assetPaths.length === 0) {
+      throw new Error("no /assets/ entries in index.html");
+    }
+    for (const path of assetPaths) {
+      const res = await fetchNetworkNoStore(new URL(path, origin).href, REFRESH_FILE_TIMEOUT_MS);
+      const req = new Request(path);
+      if (!isRefreshCacheable(req, res)) {
+        throw new Error(`asset ${path} not cacheable (${res.status})`);
+      }
+      await staging.put(req, res);
+    }
+
+    const live = await caches.open(CACHE_NAME);
+    const staged = await staging.keys();
+    for (const req of staged) {
+      const res = await staging.match(req);
+      if (res) await live.put(req, res);
+    }
+    await caches.delete(REFRESH_STAGING);
+    replyRefresh(port, { ok: true });
+  } catch (err) {
+    await caches.delete(REFRESH_STAGING).catch(() => {});
+    const reason = err && err.message ? err.message : String(err);
+    console.warn("[SW] REFRESH_APP failed:", reason);
+    replyRefresh(port, { ok: false, reason });
+  }
+}
 
 function responseLooksLikeHtml(response) {
   const ct = (response.headers.get("content-type") || "").toLowerCase();

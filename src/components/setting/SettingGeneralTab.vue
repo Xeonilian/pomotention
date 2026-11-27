@@ -10,7 +10,22 @@
     <n-card size="small" class="setting-tab-card">
       <n-descriptions class="setting-general-desc" label-placement="left" :column="1" bordered size="small">
         <n-descriptions-item label="软件版本">{{ generalVersionDisplay }}</n-descriptions-item>
-        <n-descriptions-item label="SW 版本">{{ swVersionDisplay }}</n-descriptions-item>
+        <n-descriptions-item label="SW 版本">
+          <span class="setting-sw-version-row">
+            <span>{{ swVersionDisplay }}</span>
+            <n-button
+              v-if="canManualPwaRefresh"
+              size="tiny"
+              quaternary
+              :loading="pwaRefreshLoading"
+              :disabled="pwaRefreshLoading"
+              title="下载最新部署到暂存，成功后再替换；失败仍用当前版本"
+              @click="handlePwaAppRefresh"
+            >
+              更新
+            </n-button>
+          </span>
+        </n-descriptions-item>
         <n-descriptions-item v-if="isTauri()" label="线上最新">
           <template v-if="remoteReleaseOk">
             <n-tag type="default" size="small" round>{{ remoteReleaseVersion }}</n-tag>
@@ -90,6 +105,7 @@ import { useSyncStore } from "@/stores/useSyncStore";
 import { clearAllAppStorage } from "@/services/data/localStorageService";
 import { isSupabaseEnabled, supabase } from "@/core/services/supabase";
 import { usePwaInstall } from "@/composables/platform/usePwaInstall";
+import { requestPwaAppRefresh, reloadAfterPwaAppRefresh } from "@/composables/platform/requestPwaAppRefresh";
 import { isTauri } from "@tauri-apps/api/core";
 import { getVersion } from "@tauri-apps/api/app";
 import { getCurrentUser, purgeSupabaseAuthStorage } from "@/core/services/authService";
@@ -115,8 +131,15 @@ const generalSystemLine = ref("-");
 const generalBrowserLine = ref("-");
 /** 来自 sw.js 的 CACHE_VERSION（当前控制页的脚本） */
 const swVersionDisplay = ref("…");
+const pwaRefreshLoading = ref(false);
 
 const { isStandalone } = usePwaInstall();
+
+const canManualPwaRefresh = computed(() => {
+  if (isTauri()) return false;
+  if (typeof navigator === "undefined" || !("serviceWorker" in navigator)) return false;
+  return swVersionDisplay.value !== "无";
+});
 
 const generalVersionDisplay = computed(() => {
   if (isTauri()) {
@@ -351,6 +374,39 @@ async function refreshSwVersion() {
   }
 }
 
+async function handlePwaAppRefresh() {
+  if (pwaRefreshLoading.value || !canManualPwaRefresh.value) return;
+  pwaRefreshLoading.value = true;
+  try {
+    const result = await requestPwaAppRefresh();
+    if (result.ok) {
+      notification.success({
+        title: "已下载最新版本",
+        content: "即将刷新…",
+        duration: 2000,
+      });
+      reloadAfterPwaAppRefresh();
+      return;
+    }
+    notification.warning({
+      title: "更新未成功",
+      content: `仍使用当前版本。${result.reason ? `（${result.reason}）` : "可稍后重试。"}`,
+      duration: 8000,
+      keepAliveOnHover: true,
+    });
+  } catch (err) {
+    console.error("[Setting] PWA 手动更新失败:", err);
+    notification.warning({
+      title: "更新未成功",
+      content: "仍使用当前版本，可稍后重试。",
+      duration: 6000,
+      keepAliveOnHover: true,
+    });
+  } finally {
+    pwaRefreshLoading.value = false;
+  }
+}
+
 async function refreshGeneral() {
   refreshGeneralEnvDisplay();
   void refreshSwVersion();
@@ -419,6 +475,13 @@ onMounted(() => {
 </script>
 
 <style scoped>
+.setting-sw-version-row {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
 .settings-localonly-hint {
   display: block;
   margin-top: 6px;
