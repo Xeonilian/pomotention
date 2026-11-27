@@ -1,4 +1,4 @@
-import { ref, type Ref } from "vue";
+import { ref, shallowRef } from "vue";
 import type { Marked } from "marked";
 import { createTaskMarkdown } from "@/core/utils/taskMarkdown";
 
@@ -36,7 +36,8 @@ export function prefetchTaskMarkdownEngine(): Promise<void> {
 
 export function useTaskRecordMarkdown() {
   const markdownLoaded = ref(sharedEngine !== null);
-  const markedInstance: Ref<Marked | null> = ref(sharedEngine);
+  // Marked 为 class 实例，用 shallowRef + 显式泛型，避免 ref 结构推断丢掉 parseMarkdown/onError
+  const markedInstance = shallowRef<Marked | null>(sharedEngine);
 
   async function ensureMarkdownEngine(): Promise<Marked> {
     const engine = await ensureSharedEngine();
