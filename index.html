@@ -159,16 +159,19 @@
 
         window.addEventListener("pwa-shell-ready", hideBoot);
 
-        // 慢加载只两档：20s 提示、30s 出刷新
+        // 普通冷启动：20s / 30s 出 Refresh。刚更新那次预热更慢：催等待、60s 再出 Refresh
         window.setTimeout(function () {
           if (shellReady) return;
-          setStatus("Still loading…");
+          setStatus(updating ? "Still preparing…" : "Still loading…");
         }, 20000);
-        window.setTimeout(function () {
-          if (shellReady) return;
-          setStatus("Taking a while — try Refresh");
-          if (retryBtn) retryBtn.classList.add("is-visible");
-        }, 30000);
+        window.setTimeout(
+          function () {
+            if (shellReady) return;
+            setStatus(updating ? "Still preparing — try Refresh if stuck" : "Taking a while — try Refresh");
+            if (retryBtn) retryBtn.classList.add("is-visible");
+          },
+          updating ? 60000 : 30000,
+        );
 
         function markUpdating() {
           try {

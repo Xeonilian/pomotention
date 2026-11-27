@@ -11,6 +11,8 @@ const SOUND_CACHE_VERSION = "v1";
 const SOUND_CACHE_NAME = `pomotention-sounds-${SOUND_CACHE_VERSION}`;
 /** 手动拉新暂存；activate 勿删，避免与进行中的 REFRESH_APP 打架 */
 const REFRESH_STAGING = "pomotention-refresh-staging";
+/** 仅「REFRESH_APP 成功后的下一次 navigate」：写入 live cache 的一次性标记（勿用 sw-act-reload 推断） */
+const CACHE_FIRST_NAV_FLAG = "/__pomo_cache_first_nav";
 
 const APP_SHELL = ["/", "/index.html", "/manifest.webmanifest", "/icon-128.png", "/icon-192.png", "/icon-512.png", "/favicon.ico"];
 const APP_SHELL_REQUIRED = ["/", "/index.html"];
@@ -295,6 +297,26 @@ async function navigateNetworkFirst(request) {
   return new Response("", { status: 503, statusText: "Offline" });
 }
 
+/** 消费一次性标记；只有客户端在 REFRESH_APP 成功后写入，与普通冷启动 / 纯 SW 升级无关 */
+async function consumeCacheFirstNavFlag() {
+  try {
+    const cache = await caches.open(CACHE_NAME);
+    const hit = await cache.match(CACHE_FIRST_NAV_FLAG);
+    if (!hit) return false;
+    await cache.delete(CACHE_FIRST_NAV_FLAG);
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+/** 刚写入 live 的壳优先；未命中再回落网络优先（避免误伤） */
+async function navigateAfterManualRefresh(request) {
+  const cached = (await caches.match(request)) || (await caches.match("/index.html"));
+  if (cached) return cached;
+  return navigateNetworkFirst(request);
+}
+
 function soundBareRequest(request) {
   const url = new URL(request.url);
   return new Request(`${url.origin}${url.pathname}`, { method: "GET" });
@@ -383,7 +405,14 @@ self.addEventListener("fetch", (event) => {
   }
 
   if (request.mode === "navigate") {
-    event.respondWith(navigateNetworkFirst(request));
+    event.respondWith(
+      (async () => {
+        if (await consumeCacheFirstNavFlag()) {
+          return navigateAfterManualRefresh(request);
+        }
+        return navigateNetworkFirst(request);
+      })(),
+    );
     return;
   }
 

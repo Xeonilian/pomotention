@@ -6,6 +6,8 @@ const CLIENT_TIMEOUT_MS = 180_000;
 const ACK_TIMEOUT_MS = 4_000;
 const REFRESH_FILE_TIMEOUT_MS = 90_000;
 const REFRESH_STAGING = "pomotention-refresh-staging";
+/** 与 public/sw.js CACHE_FIRST_NAV_FLAG 一致：仅手动更新成功后的下一次文档导航 */
+const CACHE_FIRST_NAV_FLAG = "/__pomo_cache_first_nav";
 
 const REQUIRED_SHELL = ["/", "/index.html"] as const;
 const OPTIONAL_SHELL = [
@@ -219,9 +221,29 @@ export async function requestPwaAppRefresh(): Promise<PwaAppRefreshResult> {
   return refreshViaCaches();
 }
 
-/** 暂存已合并进现网后再刷新页面 */
-export function reloadAfterPwaAppRefresh() {
+/**
+ * 暂存已合并进现网后再刷新页面。
+ * - sw-act-reload / pwa-updating：启动屏 Updating + 更晚 Refresh，并吞掉随后 controllerchange
+ * - CACHE_FIRST_NAV_FLAG：仅此次 navigate 缓存优先（不靠 sw-act-reload 推断，避免普通升级误判）
+ */
+export async function reloadAfterPwaAppRefresh(): Promise<void> {
+  try {
+    sessionStorage.setItem("sw-act-reload", "1");
+  } catch {
+    /* 隐私模式等 */
+  }
   markPwaUpdating();
+  try {
+    if (typeof caches !== "undefined") {
+      const cache = await caches.open(await resolveLiveCacheName());
+      await cache.put(
+        new Request(`${window.location.origin}${CACHE_FIRST_NAV_FLAG}`),
+        new Response("1", { headers: { "content-type": "text/plain" } }),
+      );
+    }
+  } catch {
+    /* 无 Cache / 写入失败：仍 reload，导航保持原 network-first */
+  }
   try {
     window.location.replace(window.location.href);
   } catch {

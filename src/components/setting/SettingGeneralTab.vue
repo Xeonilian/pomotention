@@ -385,7 +385,7 @@ async function handlePwaAppRefresh() {
         content: "即将刷新…",
         duration: 2000,
       });
-      reloadAfterPwaAppRefresh();
+      await reloadAfterPwaAppRefresh();
       return;
     }
     notification.warning({
