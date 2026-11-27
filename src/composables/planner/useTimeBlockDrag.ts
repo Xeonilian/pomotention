@@ -2,6 +2,7 @@
 
 import { ref, nextTick, type ComputedRef } from "vue";
 import { useSegStore } from "@/stores/useSegStore";
+import { useDataStore } from "@/stores/useDataStore";
 import type { TodoSegment, PomodoroSegment } from "@/core/types/Block";
 import type { Todo } from "@/core/types/Todo";
 import { usePointerDragSession } from "@/composables/gesture/usePointerDragSession";
@@ -9,6 +10,7 @@ import { usePointerDragSession } from "@/composables/gesture/usePointerDragSessi
 /**
  * 日视图番茄格拖拽：落点语义在此；Pointer 会话走 usePointerDragSession。
  * 行为对齐抽壳前：document 监听、capture、6px / 触摸 120ms、未激活抬手当选中。
+ * 落点有改动时 saveAllDebounced（与周拖一致）：约 800ms 落盘，再约 5s 防抖上传。
  */
 export function useTimeBlockDrag(
   todos: ComputedRef<Todo[]>,
@@ -18,6 +20,7 @@ export function useTimeBlockDrag(
   onClick?: (seg: TodoSegment) => void,
 ) {
   const segStore = useSegStore();
+  const { saveAllDebounced } = useDataStore();
   const lastDragEndedAt = ref(0);
 
   const dragState = ref({
@@ -79,6 +82,7 @@ export function useTimeBlockDrag(
             draggedTodo.globalIndex = targetGlobalIndex;
             draggedTodo.synced = false;
             segStore.recalculateTodoAllocations(todos.value, dayStart);
+            saveAllDebounced();
           }
         }
       }

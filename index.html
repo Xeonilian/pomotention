@@ -101,8 +101,8 @@
       <div class="pwa-boot__inner">
         <img src="/icon-192.png" alt="" class="pwa-boot__icon" width="96" height="96" />
         <span class="pwa-boot__name">Pomotention</span>
-        <span id="pwa-boot-status" class="pwa-boot__status">正在启动…</span>
-        <button id="pwa-boot-retry" type="button" class="pwa-boot__retry">刷新页面</button>
+        <span id="pwa-boot-status" class="pwa-boot__status">Starting…</span>
+        <button id="pwa-boot-retry" type="button" class="pwa-boot__retry">Refresh</button>
       </div>
     </div>
     <div id="app" style="height: 100%"></div>
@@ -113,7 +113,7 @@
         var retryBtn = document.getElementById("pwa-boot-retry");
         if (!boot || !statusEl) return;
 
-        // 仅「本会话故意为升级刷新」才显示正在更新；其余首次/冷启动统一「正在启动…」
+        // 仅「本会话故意为升级刷新」才显示 Updating；其余首次/冷启动统一 Starting…
         var intentionalUpdate = false;
         try {
           intentionalUpdate = !!sessionStorage.getItem("sw-act-reload");
@@ -130,7 +130,7 @@
         // 浏览器 / PWA 一律先盖启动屏，避免主包未到时纯白；shell-ready 后再撤
         boot.classList.add("is-visible");
         boot.setAttribute("aria-hidden", "false");
-        statusEl.textContent = updating ? "正在更新…" : "正在启动…";
+        statusEl.textContent = updating ? "Updating…" : "Starting…";
 
         var shellReady = false;
         var hadControllerOnLoad = "serviceWorker" in navigator && !!navigator.serviceWorker.controller;
@@ -159,19 +159,19 @@
 
         window.addEventListener("pwa-shell-ready", hideBoot);
 
+        // 普通冷启动：20s / 30s 出 Refresh。刚更新那次预热更慢：催等待、60s 再出 Refresh
         window.setTimeout(function () {
           if (shellReady) return;
-          setStatus("努力加载中…");
-        }, 12000);
-        window.setTimeout(function () {
-          if (shellReady) return;
-          setStatus("仍在努力加载中…");
-        }, 24000);
-        window.setTimeout(function () {
-          if (shellReady) return;
-          setStatus("加载时间较长，可刷新页面再试");
-          if (retryBtn) retryBtn.classList.add("is-visible");
-        }, 48000);
+          setStatus(updating ? "Still preparing…" : "Still loading…");
+        }, 20000);
+        window.setTimeout(
+          function () {
+            if (shellReady) return;
+            setStatus(updating ? "Still preparing — try Refresh if stuck" : "Taking a while — try Refresh");
+            if (retryBtn) retryBtn.classList.add("is-visible");
+          },
+          updating ? 60000 : 30000,
+        );
 
         function markUpdating() {
           try {
@@ -181,7 +181,7 @@
 
         function hardReload() {
           markUpdating();
-          setStatus("正在更新…");
+          setStatus("Updating…");
           var url = window.location.href.split("#")[0];
           url = url.replace(/([?&])pwa_recover=\d+/g, "$1").replace(/[?&]$/, "");
           url += (url.indexOf("?") >= 0 ? "&" : "?") + "pwa_recover=" + Date.now();
@@ -202,10 +202,10 @@
 
         // 普通刷新（等同 F5）：不删 Cache、不卸 SW；先改文案再 reload，避免像没点到
         function softReload() {
-          setStatus("正在刷新…");
+          setStatus("Refreshing…");
           if (retryBtn) {
             retryBtn.disabled = true;
-            retryBtn.textContent = "正在刷新…";
+            retryBtn.textContent = "Refreshing…";
           }
           window.setTimeout(function () {
             try {

@@ -7,7 +7,6 @@ import {
   clampRangeToDay,
   deltaYToMs,
   repeatActivityToDay,
-  resolveRepeatSourceDayTs,
 } from "@/services/activity/repeatActivityToDay";
 import { startOfDay } from "@/core/utils/weekDays";
 
@@ -108,7 +107,8 @@ export function useWeekBlockDrag(options: UseWeekBlockDragOptions) {
 
     const sourceTodo = item.type === "todo" ? todoById.value.get(item.id) : null;
     const sourceSchedule = item.type === "schedule" ? scheduleById.value.get(item.id) : null;
-    const sourceDay = resolveRepeatSourceDayTs(sourceActivity, sourceTodo, sourceSchedule);
+    // 门禁只看视觉块所在日，完全不管 todo.dueDate
+    const sourceDay = startOfDay(sourceBlock.start);
     if (!(targetDayStart > sourceDay)) return false;
 
     const isToday = startOfDay(Date.now()) === targetDayStart;
@@ -118,6 +118,7 @@ export function useWeekBlockDrag(options: UseWeekBlockDragOptions) {
       sourceSchedule,
       targetDayStart,
       isTargetDayToday: isToday,
+      sourceDayTs: sourceDay,
       combineDateAndTime: dateService.combineDateAndTime,
     });
 
@@ -145,6 +146,9 @@ export function useWeekBlockDrag(options: UseWeekBlockDragOptions) {
     let nextStart = originVisualStart + deltaMs;
     let nextEnd = originVisualEnd + deltaMs;
     ({ start: nextStart, end: nextEnd } = clampRangeToDay(nextStart, nextEnd, dayStart));
+    // 再 round，防止 origin 已带小数时继续写入非整数毫秒
+    nextStart = Math.round(nextStart);
+    nextEnd = Math.round(nextEnd);
 
     if (sourceBlock.type === "todo") {
       const todo = todoById.value.get(sourceBlock.item.id);
@@ -172,7 +176,7 @@ export function useWeekBlockDrag(options: UseWeekBlockDragOptions) {
       activity.lastModified = Date.now();
     }
     if (schedule.doneTime != null) {
-      const dur = originVisualEnd - originVisualStart;
+      const dur = Math.round(originVisualEnd - originVisualStart);
       schedule.doneTime = nextStart + dur;
     }
     saveAllDebounced();

@@ -1245,8 +1245,6 @@ onMounted(() => {
   word-break: break-word;
   overflow-wrap: anywhere;
   vertical-align: top;
-  font-size: 12px;
-  line-height: 1.35;
 }
 
 .device-detect-desc :deep(.n-descriptions-table-content) {
@@ -1256,8 +1254,6 @@ onMounted(() => {
   word-break: break-word;
   overflow-wrap: anywhere;
   vertical-align: top;
-  font-size: 12px;
-  line-height: 1.35;
 }
 
 .detection-hint {

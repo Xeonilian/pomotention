@@ -232,8 +232,20 @@ export class ScheduleSyncService extends BaseSyncService<Schedule, CloudSchedule
           doneTime: cloudItem.doneTime as number | null,
         };
         const detail = plannerSkipDetail(localItem, cloudFields);
+        // 未同步：不整行套云端（保本地标题等），只 fill 空勾选/时间，避免随后上传用空值盖云端
         if (!localItem.synced) {
-          skipped.push({ id: cloudId, reason: "unsynced", detail });
+          const merged = mergePlannerFields(localItem, cloudFields, "fill-only");
+          if (merged.changed) {
+            Object.assign(localItem, {
+              status: merged.status,
+              doneTime: merged.doneTime,
+              statusCleared: merged.statusCleared,
+              doneTimeCleared: merged.doneTimeCleared,
+            });
+            downloadedCount++;
+          } else {
+            skipped.push({ id: cloudId, reason: "unsynced", detail });
+          }
           continue;
         }
 
@@ -268,6 +280,7 @@ export class ScheduleSyncService extends BaseSyncService<Schedule, CloudSchedule
           doneTime: merged.doneTime,
           statusCleared: merged.statusCleared,
           doneTimeCleared: merged.doneTimeCleared,
+          cloudModified: cloudTimestamp,
           synced: merged.reupload ? false : true,
           lastModified: merged.reupload ? Date.now() : updatedItem.lastModified,
         });

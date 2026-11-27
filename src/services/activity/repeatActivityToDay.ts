@@ -19,6 +19,8 @@ export type RepeatActivityToDayInput = {
   isTargetDayToday: boolean;
   /** true：只复制 Activity+Task（键盘 repeatActivityOnly） */
   activityOnly?: boolean;
+  /** 覆盖来源日（周拖用视觉块日；不管 todo.dueDate） */
+  sourceDayTs?: number;
   /** 覆盖 now（单测） */
   now?: number;
   combineDateAndTime: (dayTs: number, clockTs: number) => number;
@@ -40,12 +42,11 @@ export function formatSourceDayIso(ts: number): string {
   return `${y}-${m}-${day}`;
 }
 
-/** Todo→dueDate 日；Schedule→dueRange[0] 日 */
+/** Todo→startTime 日；Schedule→dueRange[0] 日；不管 todo/activity.dueDate */
 export function resolveRepeatSourceDayTs(activity: Activity, sourceTodo?: Todo | null, sourceSchedule?: Schedule | null): number {
-  if (sourceTodo?.dueDate != null) return startOfDay(sourceTodo.dueDate);
+  if (sourceTodo?.startTime != null) return startOfDay(sourceTodo.startTime);
   const schStart = sourceSchedule?.activityDueRange?.[0];
   if (schStart != null) return startOfDay(schStart);
-  if (activity.class === "T" && activity.dueDate != null) return startOfDay(activity.dueDate);
   if (activity.dueRange?.[0] != null) return startOfDay(activity.dueRange[0]);
   return startOfDay(Date.now());
 }
@@ -81,7 +82,7 @@ export function repeatActivityToDay(input: RepeatActivityToDayInput): RepeatActi
     combineDateAndTime,
   } = input;
   const now = input.now ?? Date.now();
-  const sourceDayTs = resolveRepeatSourceDayTs(sourceActivity, sourceTodo, sourceSchedule);
+  const sourceDayTs = input.sourceDayTs ?? resolveRepeatSourceDayTs(sourceActivity, sourceTodo, sourceSchedule);
   const sourceDayIso = formatSourceDayIso(sourceDayTs);
   const title = sourceActivity.title;
 
@@ -165,8 +166,8 @@ export function clampRangeToDay(start: number, end: number, dayStart: number): {
   return { start: s, end: e };
 }
 
-/** 像素位移 → 毫秒（周轴） */
+/** 像素位移 → 毫秒（周轴）；取整，避免 start/done 写入带小数导致云端 bigint 拒收 */
 export function deltaYToMs(deltaY: number, pxPerHour: number): number {
   if (!(pxPerHour > 0)) return 0;
-  return (deltaY / pxPerHour) * 3600_000;
+  return Math.round((deltaY / pxPerHour) * 3600_000);
 }

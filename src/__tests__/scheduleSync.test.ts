@@ -204,6 +204,37 @@ describe("ScheduleSyncService", () => {
       expect(scheduleListRef.value[0].activityTitle).toBe("新标题");
     });
 
+    it("download: 未同步行只补空勾选/时间，不改标题", async () => {
+      const existingSchedule = createMockSchedule({
+        id: 1111111111111,
+        status: "",
+        doneTime: undefined,
+        activityTitle: "本地标题",
+        synced: false,
+      });
+      scheduleListRef.value = [existingSchedule];
+      indexMap.set(existingSchedule.id, existingSchedule);
+
+      vi.mocked(supabaseClient.rpc).mockResolvedValueOnce(
+        mockPostgrestOk([
+          createMockFullScheduleFromCloud({
+            id: 1111111111111,
+            status: "done",
+            doneTime: 1_700_000_100_000,
+            activityTitle: "云端标题",
+            last_modified: new Date(Date.now() + 60_000).toISOString(),
+          }),
+        ]),
+      );
+
+      await service.download(0);
+
+      expect(scheduleListRef.value[0].status).toBe("done");
+      expect(scheduleListRef.value[0].doneTime).toBe(1_700_000_100_000);
+      expect(scheduleListRef.value[0].activityTitle).toBe("本地标题");
+      expect(scheduleListRef.value[0].synced).toBe(false);
+    });
+
     it("download: 保留本地未同步的修改", async () => {
       const now = Date.now();
       const localSchedule = createUnsyncedSchedule({

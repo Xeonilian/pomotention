@@ -47,6 +47,11 @@ export interface GlobalSettings {
   rightWidth: number;
   topHeight: number;
   searchWidth: number;
+  /**
+   * 是否播放「可听」白噪音轨（名字沿用 Enabled）。
+   * true：工作段播 whiteNoiseSoundTrack；false：计时进行中改播近静音 white_noise_break 保活媒体链
+   * （手机失焦后仍能起 work_middle 等），空闲/重置/结束则真正 stop，不是「关了就全程不播」。
+   */
   isWhiteNoiseEnabled: boolean;
   whiteNoiseSoundTrack: SoundType;
   webdavId: string;

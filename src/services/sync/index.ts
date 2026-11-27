@@ -18,9 +18,21 @@ import { isSupabaseEnabled } from "@/core/services/supabase";
 import { getSyncEntitlement } from "@/core/billing/entitlement";
 import { SettingsSyncService } from "./settingsSync";
 import { BaseSyncService } from "./baseSyncService";
-import { findActiveCountLeaks, type ActiveCountRow } from "./completenessProbe";
+import { findActiveCountLeaks, shouldPullFirstByCursor, type ActiveCountRow } from "./completenessProbe";
 import { formatDownloadDetails, isTimeoutMessage, type SyncSkip } from "./plannerFieldMerge";
 import { orphanPurgeTotal, purgeOrphanPlannerRows } from "@/services/activity/purgeOrphanPlannerRows";
+
+/** 用 todos/schedules 现有 last_modified 探云端是否新于本地游标（不改表结构） */
+async function probePlannerCloudMaxModified(): Promise<number> {
+  let cloudMax = 0;
+  for (const name of ["Todos", "Schedules"] as const) {
+    const entry = syncServices.find((s) => s.name === name);
+    if (!entry?.service?.getCloudMaxModified) continue;
+    const res = await entry.service.getCloudMaxModified();
+    if (res.success && res.maxModified > cloudMax) cloudMax = res.maxModified;
+  }
+  return cloudMax;
+}
 
 const shouldLogSyncDebug = ["1", "true"].includes(String(import.meta.env.VITE_SYNC_DEBUG_LOG ?? "").trim().toLowerCase());
 function syncDebugLog(...args: unknown[]) {
@@ -450,27 +462,46 @@ export async function syncAll() {
       return { success: false, errors: ["自动同步已暂停"] };
     }
 
-    // 1. 上传
-    const upRes = await _internalUpload();
-    errors.push(...upRes.errors);
-    // 上传超时后这一轮不再下载，避免半截结果接着写内存
-    if (upRes.errors.some(isTimeoutMessage)) {
-      return { success: false, errors, details: { uploaded: upRes.count, downloaded: 0 } };
-    }
-
-    // 2. 下载
-    // 决定是否全量：如果是 0，或者上次同步距今太久(可选)，则全量
     const lastSync = syncStore.lastSyncTimestamp;
-    const isFirstSync = lastSync === 0;
+    const cloudMax = await probePlannerCloudMaxModified();
+    const pullFirst = shouldPullFirstByCursor(lastSync, cloudMax);
+    if (lastSync === 0) syncDebugLog("🔄 本地游标为 0，下载将走全量窗口");
+    if (pullFirst) syncDebugLog("🔄 云端新于本地游标，先下载再上传");
 
-    if (isFirstSync) syncDebugLog("🔄 首次同步，执行全量下载");
+    let upRes: SyncResult = { errors: [], count: 0 };
+    let downRes: SyncResult = { errors: [], count: 0, details: [] };
 
-    const downRes = await _internalDownload(lastSync);
-    errors.push(...downRes.errors);
+    if (pullFirst) {
+      // 1. 先下：未同步行只 fill 勾选/时间，不整行盖本地字
+      downRes = await _internalDownload(lastSync);
+      errors.push(...downRes.errors);
+      if (downRes.errors.length === 0) {
+        purgeOrphansAfterDownload(dataStore);
+      }
+      if (downRes.errors.some(isTimeoutMessage)) {
+        return { success: false, errors, details: { uploaded: 0, downloaded: downRes.count } };
+      }
 
-    // 2b. activity 云端已删时，本地提前级联软删 orphan 子表
-    if (downRes.errors.length === 0) {
-      purgeOrphansAfterDownload(dataStore);
+      // 2. 再上
+      upRes = await _internalUpload();
+      errors.push(...upRes.errors);
+    } else {
+      // 1. 上传
+      upRes = await _internalUpload();
+      errors.push(...upRes.errors);
+      // 上传超时后这一轮不再下载，避免半截结果接着写内存
+      if (upRes.errors.some(isTimeoutMessage)) {
+        return { success: false, errors, details: { uploaded: upRes.count, downloaded: 0 } };
+      }
+
+      // 2. 下载
+      downRes = await _internalDownload(lastSync);
+      errors.push(...downRes.errors);
+
+      // 2b. activity 云端已删时，本地提前级联软删 orphan 子表
+      if (downRes.errors.length === 0) {
+        purgeOrphansAfterDownload(dataStore);
+      }
     }
 
     // 3. 清理 (不阻塞主流程，失败也不报错给用户)
@@ -494,7 +525,7 @@ export async function syncAll() {
 }
 
 /**
- * 设置页「同步数据库」：先上传，再按未删除条数探测；云端更多则全量下载，否则仍增量。
+ * 设置页「同步数据库」：云端新于游标则先下后上；否则先上再按未删除条数探测（漏下则全量）。
  * 手动触发，不受自动同步开关限制。不改双击账号按钮。
  */
 export async function syncDatabase() {
@@ -503,10 +534,17 @@ export async function syncDatabase() {
     const dataStore = useDataStore();
     const errors: string[] = [];
 
-    const upRes = await _internalUpload();
-    errors.push(...upRes.errors);
-    if (errors.length > 0) {
-      return { success: false, errors, details: { uploaded: upRes.count, downloaded: 0 } };
+    const lastSyncCursor = syncStore.lastSyncTimestamp;
+    const cloudMax = await probePlannerCloudMaxModified();
+    const pullFirst = shouldPullFirstByCursor(lastSyncCursor, cloudMax);
+
+    let upRes: SyncResult = { errors: [], count: 0 };
+    if (!pullFirst) {
+      upRes = await _internalUpload();
+      errors.push(...upRes.errors);
+      if (errors.length > 0) {
+        return { success: false, errors, details: { uploaded: upRes.count, downloaded: 0 } };
+      }
     }
 
     const countRows: ActiveCountRow[] = [];
@@ -530,12 +568,18 @@ export async function syncDatabase() {
         leaks.map((row) => `${row.name} cloud=${row.cloud} local=${row.local}`).join("; "),
       );
     }
+    if (pullFirst) syncDebugLog("🔄 同步数据库：云端新于本地游标，先下载再上传");
 
     const downRes = await _internalDownload(lastSync, { reconcilePlanner: true });
     errors.push(...downRes.errors);
 
     if (downRes.errors.length === 0) {
       purgeOrphansAfterDownload(dataStore);
+    }
+
+    if (pullFirst) {
+      upRes = await _internalUpload();
+      errors.push(...upRes.errors);
     }
 
     await _internalCleanup();

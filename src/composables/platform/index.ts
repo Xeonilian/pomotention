@@ -2,6 +2,7 @@
 export { useDevice } from "@/composables/platform/useDevice";
 export { usePwaInstall } from "@/composables/platform/usePwaInstall";
 export { usePwaUpdate } from "@/composables/platform/usePwaUpdate";
+export { requestPwaAppRefresh, reloadAfterPwaAppRefresh } from "@/composables/platform/requestPwaAppRefresh";
 export { navigateToBuiltDocs } from "@/composables/platform/useDocsUrl";
 export { createTouchScheduledSingleAndDouble } from "@/composables/platform/useTouchScheduledSingleAndDouble";
 export { usePomoSlotVoidFingerDouble, pomoFingerVoidPathEnabled } from "@/composables/platform/usePomoSlotVoidFingerDouble";

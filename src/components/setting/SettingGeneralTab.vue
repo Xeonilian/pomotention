@@ -8,9 +8,24 @@
       <p class="support-note">说明见帮助「支持与订阅」。</p>
     </n-card>
     <n-card size="small" class="setting-tab-card">
-      <n-descriptions label-placement="left" :column="1" bordered size="small">
-        <n-descriptions-item label="当前版本">{{ generalVersionDisplay }}</n-descriptions-item>
-        <n-descriptions-item label="SW 版本">{{ swVersionDisplay }}</n-descriptions-item>
+      <n-descriptions class="setting-general-desc" label-placement="left" :column="1" bordered size="small">
+        <n-descriptions-item label="软件版本">{{ generalVersionDisplay }}</n-descriptions-item>
+        <n-descriptions-item label="SW 版本">
+          <span class="setting-sw-version-row">
+            <span>{{ swVersionDisplay }}</span>
+            <n-button
+              v-if="canManualPwaRefresh"
+              size="tiny"
+              quaternary
+              :loading="pwaRefreshLoading"
+              :disabled="pwaRefreshLoading"
+              title="下载最新部署到暂存，成功后再替换；失败仍用当前版本"
+              @click="handlePwaAppRefresh"
+            >
+              更新
+            </n-button>
+          </span>
+        </n-descriptions-item>
         <n-descriptions-item v-if="isTauri()" label="线上最新">
           <template v-if="remoteReleaseOk">
             <n-tag type="default" size="small" round>{{ remoteReleaseVersion }}</n-tag>
@@ -90,6 +105,7 @@ import { useSyncStore } from "@/stores/useSyncStore";
 import { clearAllAppStorage } from "@/services/data/localStorageService";
 import { isSupabaseEnabled, supabase } from "@/core/services/supabase";
 import { usePwaInstall } from "@/composables/platform/usePwaInstall";
+import { requestPwaAppRefresh, reloadAfterPwaAppRefresh } from "@/composables/platform/requestPwaAppRefresh";
 import { isTauri } from "@tauri-apps/api/core";
 import { getVersion } from "@tauri-apps/api/app";
 import { getCurrentUser, purgeSupabaseAuthStorage } from "@/core/services/authService";
@@ -115,8 +131,15 @@ const generalSystemLine = ref("-");
 const generalBrowserLine = ref("-");
 /** 来自 sw.js 的 CACHE_VERSION（当前控制页的脚本） */
 const swVersionDisplay = ref("…");
+const pwaRefreshLoading = ref(false);
 
 const { isStandalone } = usePwaInstall();
+
+const canManualPwaRefresh = computed(() => {
+  if (isTauri()) return false;
+  if (typeof navigator === "undefined" || !("serviceWorker" in navigator)) return false;
+  return swVersionDisplay.value !== "无";
+});
 
 const generalVersionDisplay = computed(() => {
   if (isTauri()) {
@@ -337,8 +360,7 @@ async function refreshSwVersion() {
   }
   try {
     const reg = await navigator.serviceWorker.getRegistration();
-    const scriptUrl =
-      reg?.active?.scriptURL || reg?.waiting?.scriptURL || reg?.installing?.scriptURL || `${window.location.origin}/sw.js`;
+    const scriptUrl = reg?.active?.scriptURL || reg?.waiting?.scriptURL || reg?.installing?.scriptURL || `${window.location.origin}/sw.js`;
     const res = await fetch(scriptUrl, { cache: "no-cache" });
     if (!res.ok) {
       swVersionDisplay.value = "读取失败";
@@ -349,6 +371,47 @@ async function refreshSwVersion() {
     swVersionDisplay.value = m?.[1] ? m[1] : "未知";
   } catch {
     swVersionDisplay.value = "读取失败";
+  }
+}
+
+async function handlePwaAppRefresh() {
+  if (pwaRefreshLoading.value || !canManualPwaRefresh.value) return;
+  pwaRefreshLoading.value = true;
+  try {
+    const result = await requestPwaAppRefresh();
+    if (result.ok) {
+      if (result.upToDate) {
+        notification.success({
+          title: "已是最新",
+          content: "资源与线上一致，无需刷新。",
+          duration: 2500,
+        });
+        return;
+      }
+      notification.success({
+        title: "已下载最新版本",
+        content: "即将刷新…",
+        duration: 2000,
+      });
+      await reloadAfterPwaAppRefresh();
+      return;
+    }
+    notification.warning({
+      title: "更新未成功",
+      content: `仍使用当前版本。${result.reason ? `（${result.reason}）` : "可稍后重试。"}`,
+      duration: 8000,
+      keepAliveOnHover: true,
+    });
+  } catch (err) {
+    console.error("[Setting] PWA 手动更新失败:", err);
+    notification.warning({
+      title: "更新未成功",
+      content: "仍使用当前版本，可稍后重试。",
+      duration: 6000,
+      keepAliveOnHover: true,
+    });
+  } finally {
+    pwaRefreshLoading.value = false;
   }
 }
 
@@ -420,6 +483,13 @@ onMounted(() => {
 </script>
 
 <style scoped>
+.setting-sw-version-row {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
 .settings-localonly-hint {
   display: block;
   margin-top: 6px;
@@ -444,6 +514,22 @@ onMounted(() => {
 
 .setting-tab-card + .setting-tab-card {
   margin-top: 12px;
+}
+
+/* 手机：标签列随内容收缩（约 4 字），不固定死宽度挤坏右列 */
+@media (max-width: 768px) {
+  .setting-general-desc :deep(.n-descriptions-table-header) {
+    width: 1%;
+    white-space: nowrap;
+    padding-left: 10px;
+    padding-right: 10px;
+  }
+
+  .setting-general-desc :deep(.n-descriptions-table-content) {
+    word-break: normal;
+    overflow-wrap: break-word;
+    min-width: 0;
+  }
 }
 </style>
 

@@ -59,6 +59,7 @@
   text-align: left;
   vertical-align: top;
   line-height: 1.55;
+  font-size: 13px;
 }
 
 .setting-table th {
@@ -66,8 +67,15 @@
   z-index: 1;
   background: var(--color-background-dark);
   color: var(--n-text-color-1);
-  font-size: 13px;
   font-weight: 700;
+}
+
+/* 与 .setting-table 统一：描述表标签/内容都 13px（覆盖 size=small 的偏小字） */
+.setting-tab-card :deep(.n-descriptions),
+.setting-tab-card :deep(.n-descriptions-table-header),
+.setting-tab-card :deep(.n-descriptions-table-content) {
+  font-size: 13px;
+  line-height: 1.55;
 }
 
 /* 移动端：描述表收紧；短标签可不换行，长标签由各页自行覆盖 */
