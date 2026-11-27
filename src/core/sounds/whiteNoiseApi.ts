@@ -43,11 +43,12 @@ export async function startWhiteNoise(): Promise<void> {
   startWhiteNoiseHtml(src, vol);
 }
 
-/** 休息段：专用近静音循环素材 white_noise_break.wav，增益与环境白噪音一致（见 whiteNoiseHtml） */
+/**
+ * 近静音循环 white_noise_break.wav：休息段听感占位；计时中关白噪音时也用它保活 HTML 媒体链，
+ * 避免手机失焦后 work_middle / 结束音无法 play（NotAllowed）。
+ * 不检查 isWhiteNoiseEnabled——关白噪音时仍须起播。
+ */
 export async function startSilentWhiteNoiseHold(): Promise<void> {
-  const settingStore = useSettingStore();
-  if (!settingStore.settings.isWhiteNoiseEnabled) return;
-
   const track = SoundType.WHITE_NOISE_BREAK;
   const path = soundPaths[track];
   if (!path) {
@@ -77,7 +78,17 @@ export function toggleWhiteNoise(): void {
   const settingStore = useSettingStore();
   settingStore.settings.isWhiteNoiseEnabled = !settingStore.settings.isWhiteNoiseEnabled;
   if (!settingStore.settings.isWhiteNoiseEnabled) {
-    stopWhiteNoise();
+    // 计时中：切近静音保活，勿拆双轨；空闲才真正 stop
+    void import("@/stores/useTimerStore")
+      .then(({ useTimerStore }) => {
+        if (useSettingStore().settings.isWhiteNoiseEnabled) return;
+        const ts = useTimerStore();
+        if (ts.isActive) void startSilentWhiteNoiseHold();
+        else stopWhiteNoise();
+      })
+      .catch(() => {
+        stopWhiteNoise();
+      });
     return;
   }
   void import("@/stores/useTimerStore")
@@ -95,19 +106,19 @@ export function toggleWhiteNoise(): void {
 
 function tryRestartWhiteNoiseIfNeeded(): void {
   try {
-    if (!useSettingStore().settings.isWhiteNoiseEnabled) return;
     if (isHtmlWhiteNoiseActive()) return;
     void import("@/stores/useTimerStore")
       .then(({ useTimerStore }) => {
-        if (!useSettingStore().settings.isWhiteNoiseEnabled) return;
         const ts = useTimerStore();
         if (!ts.isActive) return;
-        if (ts.isWorking) {
+        const enabled = useSettingStore().settings.isWhiteNoiseEnabled;
+        if (enabled && ts.isWorking) {
           void startWhiteNoise();
           dbgAudio("[WN] 前台恢复补白噪音");
-        } else if (ts.isBreaking) {
+        } else {
+          // 休息段、或关白噪音时的近静音保活
           void startSilentWhiteNoiseHold();
-          dbgAudio("[WN] 前台恢复补休息静音轨");
+          dbgAudio(enabled ? "[WN] 前台恢复补休息静音轨" : "[WN] 前台恢复补近静音保活");
         }
       })
       .catch(() => {});
