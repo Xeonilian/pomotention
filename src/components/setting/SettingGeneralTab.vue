@@ -380,6 +380,14 @@ async function handlePwaAppRefresh() {
   try {
     const result = await requestPwaAppRefresh();
     if (result.ok) {
+      if (result.upToDate) {
+        notification.success({
+          title: "已是最新",
+          content: "资源与线上一致，无需刷新。",
+          duration: 2500,
+        });
+        return;
+      }
       notification.success({
         title: "已下载最新版本",
         content: "即将刷新…",

@@ -174,8 +174,25 @@ async function handleRefreshApp(port) {
     if (!isRefreshCacheable(indexReq, indexRes)) {
       throw new Error(`index not cacheable (${indexRes.status})`);
     }
-    await staging.put(indexReq, indexRes.clone());
     const indexText = await indexRes.text();
+    // 与本地 live index 的 /assets/ 指纹相同 → 已是最新，勿整包拉、勿合并
+    try {
+      const live = await caches.open(CACHE_NAME);
+      const liveIndex = (await live.match("/index.html")) || (await live.match("/"));
+      if (liveIndex) {
+        const liveText = await liveIndex.text();
+        const remoteFp = extractAssetPaths(indexText, origin).sort().join("|");
+        const liveFp = extractAssetPaths(liveText, origin).sort().join("|");
+        if (remoteFp && remoteFp === liveFp) {
+          await caches.delete(REFRESH_STAGING);
+          replyRefresh(port, { ok: true, upToDate: true });
+          return;
+        }
+      }
+    } catch (err) {
+      console.warn("[SW] upToDate probe skipped:", err);
+    }
+    await staging.put(indexReq, new Response(indexText, { headers: { "content-type": "text/html" } }));
 
     for (const path of APP_SHELL_REQUIRED) {
       if (path === "/index.html") continue;

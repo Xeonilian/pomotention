@@ -18,7 +18,7 @@ const OPTIONAL_SHELL = [
   "/favicon.ico",
 ] as const;
 
-export type PwaAppRefreshResult = { ok: true } | { ok: false; reason: string };
+export type PwaAppRefreshResult = { ok: true; upToDate?: boolean } | { ok: false; reason: string };
 
 function extractAssetPaths(html: string, origin: string): string[] {
   const paths = new Set<string>();
@@ -35,6 +35,43 @@ function extractAssetPaths(html: string, origin: string): string[] {
     }
   }
   return Array.from(paths);
+}
+
+/** Vite 产物指纹：index 里 /assets/ 路径排序拼接；不看 package 版本号 */
+function assetFingerprint(html: string, origin: string): string {
+  return extractAssetPaths(html, origin).slice().sort().join("|");
+}
+
+async function readCachedIndexHtml(): Promise<string | null> {
+  if (typeof caches === "undefined") return null;
+  try {
+    const cache = await caches.open(await resolveLiveCacheName());
+    const res = (await cache.match("/index.html")) || (await cache.match("/"));
+    if (!res) return null;
+    return res.text();
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * 线上 index 与本地缓存 index 的 assets 是否一致。
+ * 探测失败 → false（继续完整拉新，不误报「已是最新」）。
+ */
+async function probeAlreadyUpToDate(): Promise<boolean> {
+  try {
+    const origin = window.location.origin;
+    const remote = await fetchNoStore(`${origin}/index.html`, 15_000);
+    if (!isRefreshOk(remote, "/index.html")) return false;
+    const remoteText = await remote.text();
+    const remoteFp = assetFingerprint(remoteText, origin);
+    if (!remoteFp) return false;
+    const localText = await readCachedIndexHtml();
+    if (!localText) return false;
+    return assetFingerprint(localText, origin) === remoteFp;
+  } catch {
+    return false;
+  }
 }
 
 function isRefreshOk(res: Response, path: string): boolean {
@@ -95,8 +132,16 @@ async function refreshViaCaches(): Promise<PwaAppRefreshResult> {
     if (!isRefreshOk(indexRes, "/index.html")) {
       throw new Error(`index not ok (${indexRes.status})`);
     }
-    await staging.put("/index.html", indexRes.clone());
     const indexText = await indexRes.text();
+    const remoteFp = assetFingerprint(indexText, origin);
+    if (remoteFp) {
+      const liveHtml = await readCachedIndexHtml();
+      if (liveHtml && assetFingerprint(liveHtml, origin) === remoteFp) {
+        await caches.delete(REFRESH_STAGING);
+        return { ok: true, upToDate: true };
+      }
+    }
+    await staging.put("/index.html", new Response(indexText, { headers: { "content-type": "text/html" } }));
 
     for (const path of REQUIRED_SHELL) {
       if (path === "/index.html") continue;
@@ -172,7 +217,7 @@ function refreshViaSwMessage(worker: ServiceWorker): Promise<PwaAppRefreshResult
     }, CLIENT_TIMEOUT_MS);
 
     channel.port1.onmessage = (event: MessageEvent) => {
-      const data = event.data as { ok?: boolean; phase?: string; reason?: string } | undefined;
+      const data = event.data as { ok?: boolean; upToDate?: boolean; phase?: string; reason?: string } | undefined;
       if (!data) return;
       if (data.phase === "started") {
         started = true;
@@ -180,7 +225,7 @@ function refreshViaSwMessage(worker: ServiceWorker): Promise<PwaAppRefreshResult
         return;
       }
       if (data.ok === true) {
-        finish({ ok: true });
+        finish({ ok: true, upToDate: data.upToDate === true });
         return;
       }
       if (data.ok === false) {
@@ -199,8 +244,12 @@ function refreshViaSwMessage(worker: ServiceWorker): Promise<PwaAppRefreshResult
 /**
  * 优先问当前 SW；无 SW / 旧 SW 不识消息时，页面 Cache API 走同一套暂存合并。
  * 不调用 reg.update / SKIP_WAITING。
+ * 先比线上/本地 index 的 /assets/ 指纹；相同则 upToDate，不整包拉、不刷新。
  */
 export async function requestPwaAppRefresh(): Promise<PwaAppRefreshResult> {
+  if (await probeAlreadyUpToDate()) {
+    return { ok: true, upToDate: true };
+  }
   if (typeof navigator !== "undefined" && "serviceWorker" in navigator) {
     try {
       const reg = await navigator.serviceWorker.getRegistration();
