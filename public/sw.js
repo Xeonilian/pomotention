@@ -65,6 +65,23 @@ self.addEventListener("message", (event) => {
   if (event.data && event.data.type === "REFRESH_APP") {
     const port = event.ports && event.ports[0];
     event.waitUntil(handleRefreshApp(port));
+    return;
+  }
+  // 客户端手动更新成功后、reload 前：由 SW 写入 live cache 标记（避免页面侧 cache 名与 SW 不一致）
+  if (event.data && event.data.type === "CACHE_FIRST_NEXT_NAV") {
+    const port = event.ports && event.ports[0];
+    event.waitUntil(
+      (async () => {
+        try {
+          const cache = await caches.open(CACHE_NAME);
+          await cache.put(CACHE_FIRST_NAV_FLAG, new Response("1", { headers: { "content-type": "text/plain" } }));
+          replyRefresh(port, { ok: true });
+        } catch (err) {
+          console.warn("[SW] CACHE_FIRST_NEXT_NAV failed:", err);
+          replyRefresh(port, { ok: false });
+        }
+      })(),
+    );
   }
 });
 
@@ -292,7 +309,7 @@ async function navigateNetworkFirst(request) {
   } catch {
     clearTimeout(timer);
   }
-  const cached = (await caches.match(request)) || (await caches.match("/index.html"));
+  const cached = (await matchAppShellHtml()) || (await caches.match(request));
   if (cached) return cached;
   return new Response("", { status: 503, statusText: "Offline" });
 }
@@ -310,9 +327,22 @@ async function consumeCacheFirstNavFlag() {
   }
 }
 
-/** 刚写入 live 的壳优先；未命中再回落网络优先（避免误伤） */
+/** SPA 壳：/settings 等路由不会进 cache，不能 match(request) */
+async function matchAppShellHtml() {
+  return (
+    (await caches.match("/index.html", { ignoreSearch: true })) ||
+    (await caches.match("/", { ignoreSearch: true })) ||
+    null
+  );
+}
+
+/**
+ * 刚写入 live 的壳优先。
+ * 必须回 index.html/：在设置页 location.replace(/settings) 时若 match(request) 会 miss，
+ * 再碰上网络抖动就容易 Chrome net::ERR_FAILED (-2)。
+ */
 async function navigateAfterManualRefresh(request) {
-  const cached = (await caches.match(request)) || (await caches.match("/index.html"));
+  const cached = await matchAppShellHtml();
   if (cached) return cached;
   return navigateNetworkFirst(request);
 }

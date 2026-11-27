@@ -221,10 +221,46 @@ export async function requestPwaAppRefresh(): Promise<PwaAppRefreshResult> {
   return refreshViaCaches();
 }
 
+async function askSwCacheFirstNextNav(): Promise<boolean> {
+  if (typeof navigator === "undefined" || !("serviceWorker" in navigator)) return false;
+  try {
+    const reg = await navigator.serviceWorker.getRegistration();
+    const worker = navigator.serviceWorker.controller || reg?.active || null;
+    if (!worker) return false;
+    return await new Promise<boolean>((resolve) => {
+      const channel = new MessageChannel();
+      const timer = window.setTimeout(() => resolve(false), 800);
+      channel.port1.onmessage = (event: MessageEvent) => {
+        window.clearTimeout(timer);
+        const data = event.data as { ok?: boolean } | undefined;
+        resolve(data?.ok === true);
+      };
+      try {
+        worker.postMessage({ type: "CACHE_FIRST_NEXT_NAV" }, [channel.port2]);
+      } catch {
+        window.clearTimeout(timer);
+        resolve(false);
+      }
+    });
+  } catch {
+    return false;
+  }
+}
+
+/** 页面 Cache API 兜底写标记（旧 SW 不识 CACHE_FIRST_NEXT_NAV 时） */
+async function writeCacheFirstNavFlagViaCaches(): Promise<void> {
+  if (typeof caches === "undefined") return;
+  const cache = await caches.open(await resolveLiveCacheName());
+  await cache.put(
+    new Request(`${window.location.origin}${CACHE_FIRST_NAV_FLAG}`),
+    new Response("1", { headers: { "content-type": "text/plain" } }),
+  );
+}
+
 /**
  * 暂存已合并进现网后再刷新页面。
  * - sw-act-reload / pwa-updating：启动屏 Updating + 更晚 Refresh，并吞掉随后 controllerchange
- * - CACHE_FIRST_NAV_FLAG：仅此次 navigate 缓存优先（不靠 sw-act-reload 推断，避免普通升级误判）
+ * - CACHE_FIRST_NEXT_NAV：请 SW 写入一次性标记；导航一律用 index 壳（含 /settings）
  */
 export async function reloadAfterPwaAppRefresh(): Promise<void> {
   try {
@@ -233,19 +269,21 @@ export async function reloadAfterPwaAppRefresh(): Promise<void> {
     /* 隐私模式等 */
   }
   markPwaUpdating();
-  try {
-    if (typeof caches !== "undefined") {
-      const cache = await caches.open(await resolveLiveCacheName());
-      await cache.put(
-        new Request(`${window.location.origin}${CACHE_FIRST_NAV_FLAG}`),
-        new Response("1", { headers: { "content-type": "text/plain" } }),
-      );
+
+  const swOk = await askSwCacheFirstNextNav();
+  if (!swOk) {
+    try {
+      await writeCacheFirstNavFlagViaCaches();
+    } catch {
+      /* 仍 reload；最差回落 network-first */
     }
-  } catch {
-    /* 无 Cache / 写入失败：仍 reload，导航保持原 network-first */
   }
+
+  // 保留当前路径（如 /settings），加 recover 避免卡死中间态；勿只用 href 以免异常 hash/状态
   try {
-    window.location.replace(window.location.href);
+    const url = new URL(window.location.href);
+    url.searchParams.set("pwa_recover", String(Date.now()));
+    window.location.replace(`${url.pathname}${url.search}${url.hash}`);
   } catch {
     window.location.reload();
   }
